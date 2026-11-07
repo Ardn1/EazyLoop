@@ -1,0 +1,232 @@
+<UserControl x:Class="EazyLoop.TrackRow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:local="clr-namespace:EazyLoop"
+ Focusable="False" Margin="0,0,0,9">
+ <UserControl.Resources>
+  <Style x:Key="TrackToggle" TargetType="ToggleButton" BasedOn="{StaticResource IconToggle}">
+   <Setter Property="Width" Value="32"/>
+   <Setter Property="Height" Value="27"/>
+   <Setter Property="Content" Value="{Binding IsChecked, RelativeSource={RelativeSource Self}}"/>
+  </Style>
+  <Style x:Key="TrackMute" TargetType="ToggleButton" BasedOn="{StaticResource TrackToggle}">
+   <Setter Property="ToolTip" Value="{DynamicResource 'loc:Заглушить дорожку'}"/>
+   <Setter Property="AutomationProperties.Name" Value="{DynamicResource 'loc:Заглушить'}"/>
+   <Setter Property="ContentTemplate">
+    <Setter.Value>
+     <DataTemplate>
+      <Path Width="18" Height="16" Stretch="Uniform" StrokeThickness="1.55" StrokeLineJoin="Round"
+       StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}">
+       <Path.Style>
+        <Style TargetType="Path">
+         <Setter Property="Data" Value="M 1,6 H 4 L 8,2 V 14 L 4,10 H 1 Z M 11,5 Q 15,8 11,11 M 13,2.5 Q 20,8 13,13.5"/>
+         <Style.Triggers>
+          <DataTrigger Binding="{Binding}" Value="True">
+           <Setter Property="Data" Value="M 1,6 H 4 L 8,2 V 14 L 4,10 H 1 Z M 11,5 L 17,11 M 17,5 L 11,11"/>
+          </DataTrigger>
+         </Style.Triggers>
+        </Style>
+       </Path.Style>
+      </Path>
+     </DataTemplate>
+    </Setter.Value>
+   </Setter>
+   <Style.Triggers>
+    <Trigger Property="IsChecked" Value="True">
+     <Setter Property="Foreground" Value="{DynamicResource Rose}"/>
+     <Setter Property="ToolTip" Value="{DynamicResource 'loc:Вернуть звук дорожки'}"/>
+    </Trigger>
+   </Style.Triggers>
+  </Style>
+  <Style x:Key="TrackSolo" TargetType="ToggleButton" BasedOn="{StaticResource TrackToggle}">
+   <Setter Property="ToolTip" Value="{DynamicResource 'loc:Соло дорожки'}"/>
+   <Setter Property="AutomationProperties.Name" Value="{DynamicResource 'loc:Соло'}"/>
+   <Setter Property="ContentTemplate">
+    <Setter.Value>
+     <DataTemplate>
+      <Path Width="17" Height="16" Stretch="Uniform" StrokeThickness="1.55" StrokeLineJoin="Round"
+       StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M 2,10 V 8 A 6,6 0 0 1 14,8 V 10 M 2,9 H 5 V 15 H 2 A 1,1 0 0 1 1,14 V 10 A 1,1 0 0 1 2,9 Z M 14,9 H 11 V 15 H 14 A 1,1 0 0 0 15,14 V 10 A 1,1 0 0 0 14,9 Z"
+       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+     </DataTemplate>
+    </Setter.Value>
+   </Setter>
+   <Style.Triggers>
+    <Trigger Property="IsChecked" Value="True">
+     <Setter Property="Foreground" Value="{DynamicResource Warning}"/>
+     <Setter Property="ToolTip" Value="{DynamicResource 'loc:Снять соло'}"/>
+    </Trigger>
+   </Style.Triggers>
+  </Style>
+ </UserControl.Resources>
+ <UserControl.ContextMenu>
+  <ContextMenu Opened="TrackMenuOpened" Foreground="{DynamicResource Ink}" HasDropShadow="True">
+   <ContextMenu.Template>
+    <ControlTemplate TargetType="ContextMenu">
+     <Border Background="{DynamicResource Field}" BorderBrush="{DynamicResource StrongLine}" BorderThickness="1" CornerRadius="8" Padding="4">
+      <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+     </Border>
+    </ControlTemplate>
+   </ContextMenu.Template>
+   <ContextMenu.ItemContainerStyle>
+    <Style TargetType="MenuItem">
+     <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+     <Setter Property="Template">
+      <Setter.Value>
+       <ControlTemplate TargetType="MenuItem">
+        <Border x:Name="Item" Background="Transparent" CornerRadius="5" Padding="10,7" MinWidth="195">
+         <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+        </Border>
+        <ControlTemplate.Triggers>
+         <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Item" Property="Background" Value="{DynamicResource AccentPanel}"/></Trigger>
+         <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Item" Property="Opacity" Value=".48"/></Trigger>
+        </ControlTemplate.Triggers>
+       </ControlTemplate>
+      </Setter.Value>
+     </Setter>
+    </Style>
+   </ContextMenu.ItemContainerStyle>
+   <MenuItem x:Name="DrumSettingsMenuItem" Header="{DynamicResource 'loc:Настройки SimpleDrums…'}" Click="DrumSettingsClicked" Visibility="Collapsed"/>
+   <MenuItem x:Name="ExportMenuItem" Header="{DynamicResource 'loc:Сохранить как WAV…'}" Click="ExportMenuClicked"/>
+   <MenuItem Header="{DynamicResource 'loc:Переименовать…'}" Click="RenameMenuClicked"/>
+   <MenuItem x:Name="MuteMenuItem" Header="{DynamicResource 'loc:Заглушить'}" Click="MuteMenuClicked"/>
+   <MenuItem x:Name="SoloMenuItem" Header="{DynamicResource 'loc:Соло'}" Click="SoloMenuClicked"/>
+   <MenuItem x:Name="EditAudioMenuItem" Header="{DynamicResource 'loc:Открыть редактор аудио'}" Click="EditAudioMenuClicked"/>
+   <MenuItem x:Name="ResetShiftMenuItem" Header="{DynamicResource 'loc:Сбросить сдвиг'}" Click="ResetShiftMenuClicked"/>
+   <MenuItem x:Name="CopyAllFxMenuItem" Header="{DynamicResource 'loc:Копировать все FX'}" Click="CopyAllFxClicked"/>
+   <MenuItem x:Name="PasteAllFxMenuItem" Header="{DynamicResource 'loc:Вставить все FX'}" Click="PasteAllFxClicked"
+    ToolTip="{DynamicResource 'loc:Заменить эквалайзер и цепочку эффектов дорожки скопированными настройками.'}"/>
+   <MenuItem x:Name="RemoveMenuItem" Click="RemoveClicked">
+    <TextBlock Text="{DynamicResource 'loc:Удалить дорожку'}" Foreground="{DynamicResource Rose}"/>
+   </MenuItem>
+  </ContextMenu>
+ </UserControl.ContextMenu>
+ <Grid>
+ <Border x:Name="Card" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="12,10">
+  <Grid>
+   <Grid.ColumnDefinitions><ColumnDefinition Width="206"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <StackPanel x:Name="TrackInfoPanel" Margin="0,0,12,0">
+    <Grid Height="26">
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="19"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="32"/><ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <Button x:Name="CollapseButton" Width="18" Height="23" MinHeight="0" Padding="0" Background="Transparent"
+      BorderBrush="Transparent" Click="CollapseClicked" ToolTip="{DynamicResource 'loc:Свернуть дорожку'}" AutomationProperties.Name="{DynamicResource 'loc:Свернуть дорожку'}">
+      <Path Width="9" Height="6" Stretch="Uniform" Data="M 0,4 L 4,0 L 8,4" Stroke="{DynamicResource Soft}"
+       StrokeThickness="1.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" RenderTransformOrigin=".5,.5">
+       <Path.RenderTransform><RotateTransform x:Name="CollapseArrow"/></Path.RenderTransform>
+      </Path>
+     </Button>
+     <Border x:Name="Grip" Grid.Column="1" Width="18" Background="Transparent" Cursor="SizeNS" ToolTip="{DynamicResource 'loc:Перетащить дорожку выше или ниже'}"
+      MouseLeftButtonDown="GripDown" MouseMove="GripMove" MouseLeftButtonUp="GripUp"
+      AutomationProperties.Name="{DynamicResource 'loc:Переместить дорожку'}">
+      <Path Width="7" Height="14" Data="M 1,2 H 2 M 5,2 H 6 M 1,7 H 2 M 5,7 H 6 M 1,12 H 2 M 5,12 H 6"
+       Stroke="{DynamicResource Muted}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+     </Border>
+     <Button x:Name="TargetButton" Grid.Column="2" Width="28" MinHeight="0" Height="24" Padding="0"
+      Background="{DynamicResource AccentPanel}" BorderBrush="{DynamicResource AccentLine}" Click="TargetClicked" ToolTip="{DynamicResource 'loc:Выбрать дорожку для следующей записи'}"
+      AutomationProperties.Name="{DynamicResource 'loc:Выбрать дорожку для записи'}">
+      <TextBlock x:Name="Number" HorizontalAlignment="Center" FontFamily="Consolas" Foreground="{DynamicResource Violet}" FontSize="12"/>
+     </Button>
+     <Grid Grid.Column="3" Margin="5,0,0,0">
+      <Border x:Name="TitleHit" Background="Transparent" MouseLeftButtonDown="TitleClicked" Cursor="IBeam"
+       ToolTip="{DynamicResource 'loc:Двойной щелчок для переименования'}">
+       <TextBlock x:Name="TrackName" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{DynamicResource 'loc:Дорожка'}" FontSize="14"/>
+      </Border>
+      <TextBox x:Name="TitleEditor" Visibility="Collapsed" FontSize="13" Padding="4,0"
+       KeyDown="TitleKeys" LostKeyboardFocus="TitleFocusLost" AutomationProperties.Name="{DynamicResource 'loc:Название дорожки'}"/>
+     </Grid>
+     <Button x:Name="FxButton" Grid.Column="4" MinHeight="0" Height="24" Width="32" Margin="4,0,0,0" Padding="0" Content="FX"
+      FontFamily="Consolas" FontSize="12" Click="OpenEffects" ToolTip="{DynamicResource 'loc:Эквалайзер и эффекты дорожки'}"
+      AutomationProperties.Name="{DynamicResource 'loc:Эффекты дорожки'}"/>
+     <StackPanel x:Name="CompactMix" Grid.Column="5" Orientation="Horizontal" Margin="8,0,34,0" Visibility="Collapsed">
+      <ToggleButton Style="{StaticResource TrackMute}" Height="24" IsChecked="{Binding IsChecked, ElementName=Mute, Mode=TwoWay}"/>
+      <ToggleButton Style="{StaticResource TrackSolo}" Height="24" Margin="4,0,0,0" IsChecked="{Binding IsChecked, ElementName=Solo, Mode=TwoWay}"/>
+     </StackPanel>
+    </Grid>
+    <DockPanel x:Name="InputRow" Margin="1,4,0,6" Height="26">
+     <TextBlock DockPanel.Dock="Left" Text="{DynamicResource 'loc:ВХОД'}" Style="{StaticResource Label}" Margin="0,0,6,0"/>
+     <ComboBox x:Name="InputSelector" SelectionChanged="InputChanged" DropDownOpened="InputOpened"
+      AutomationProperties.Name="{DynamicResource 'loc:Микрофон дорожки'}">
+      <ComboBox.ItemTemplate>
+       <DataTemplate><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/></DataTemplate>
+      </ComboBox.ItemTemplate>
+     </ComboBox>
+    </DockPanel>
+    <DockPanel>
+     <Button x:Name="DrumSettingsButton" DockPanel.Dock="Right" Visibility="Collapsed" Style="{StaticResource Compact}"
+      Margin="4,4,0,6" Content="{DynamicResource 'loc:Набор…'}" Click="DrumSettingsClicked" AutomationProperties.Name="{DynamicResource 'loc:Настройки SimpleDrums'}"/>
+     <Button x:Name="MidiOpenButton" Visibility="Collapsed" Style="{StaticResource Compact}" Margin="1,4,0,6"
+      Click="MidiClicked" Content="{DynamicResource 'loc:Редактор MIDI'}" AutomationProperties.Name="{DynamicResource 'loc:Открыть редактор инструмента'}"/>
+    </DockPanel>
+    <StackPanel x:Name="TrackActions" Orientation="Horizontal">
+     <ToggleButton x:Name="Mute" Style="{StaticResource TrackMute}" Checked="MixChanged" Unchecked="MixChanged"/>
+     <ToggleButton x:Name="Solo" Style="{StaticResource TrackSolo}" Margin="4,0,0,0" Checked="MixChanged" Unchecked="MixChanged"/>
+     <TextBlock x:Name="TrackInfo" Text="{DynamicResource 'loc:Пустая'}" Foreground="{DynamicResource Soft}" FontSize="11" Margin="7,0,0,0"
+      MaxWidth="106" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+    </StackPanel>
+   </StackPanel>
+   <Grid x:Name="TrackDetails" Grid.Column="1">
+    <Grid.RowDefinitions><RowDefinition Height="57"/><RowDefinition Height="33"/></Grid.RowDefinitions>
+    <Grid x:Name="WaveRow" Margin="0,0,34,0">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/></Grid.ColumnDefinitions>
+     <local:LoopStrip x:Name="Wave" Focusable="True" KeyDown="WaveKeys"
+      AutomationProperties.Name="{DynamicResource 'loc:Открыть редактор аудио'}"
+      ToolTip="{DynamicResource 'loc:Щелчок открывает редактор. Перетаскивание сдвигает дорожку. Alt+колесо меняет масштаб.'}"/>
+     <Slider x:Name="WaveZoom" Grid.Column="1" Orientation="Vertical" Height="Auto" Margin="4,3,0,3"
+      Minimum="-2" Maximum="4" SmallChange=".25" LargeChange="1" ValueChanged="WaveZoomChanged"
+      ToolTip="{DynamicResource 'loc:Масштаб волны'}" AutomationProperties.Name="{DynamicResource 'loc:Масштаб волны'}"/>
+    </Grid>
+    <local:MidiPreviewView x:Name="MidiPreview" Margin="0,0,34,0" Visibility="Collapsed" Cursor="Hand"
+     MouseLeftButtonDown="MidiPreviewClicked" ToolTip="{DynamicResource 'loc:Открыть редактор MIDI'}"/>
+    <Grid Grid.Row="1" Margin="0,6,0,0">
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto"/><ColumnDefinition Width="12"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <StackPanel Orientation="Horizontal">
+      <Path Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,5,0"
+       Data="M 1,6 H 4 L 8,3 V 13 L 4,10 H 1 Z M 11,6 Q 14,8 11,10"
+       Stroke="{DynamicResource Soft}" StrokeThickness="1.4" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" ToolTip="{DynamicResource 'loc:Громкость'}"/>
+      <Slider x:Name="Volume" Width="100" Minimum="0" Maximum="100" Value="85" SmallChange="1" LargeChange="10"
+       ValueChanged="SliderChanged" ToolTip="{DynamicResource 'loc:Громкость'}" AutomationProperties.Name="{DynamicResource 'loc:Громкость'}"/>
+      <TextBox x:Name="VolumeValue" Text="85%" Width="45" Height="27" Margin="4,0,0,0" Padding="3,0"
+       TextAlignment="Center" FontFamily="Consolas" FontSize="12" MaxLength="8" ToolTip="{DynamicResource 'loc:Громкость от 0 до 100%'}"
+       GotKeyboardFocus="MixValueFocus" LostKeyboardFocus="MixValueFocusLost" KeyDown="MixValueKeys" AutomationProperties.Name="{DynamicResource 'loc:Громкость в процентах'}"/>
+     </StackPanel>
+     <StackPanel Grid.Column="2" Orientation="Horizontal">
+      <Grid Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,5,0" Background="Transparent" ToolTip="{DynamicResource 'loc:Панорама'}">
+       <Ellipse Margin="1" Stroke="{DynamicResource Soft}" StrokeThickness="1.25"/>
+       <Path Data="M 10,14 V 6 M 7.75,8.25 L 10,6 L 12.25,8.25"
+        Stroke="{DynamicResource Soft}" StrokeThickness="1.25" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+       <Path Data="M 4.5,8.5 V 11.5 H 6.5 M 13.5,11.5 V 8.5 H 14.6 Q 15.8,8.5 15.8,9.35 Q 15.8,10.2 14.6,10.2 H 13.5 M 14.6,10.2 L 15.9,11.5"
+        Stroke="{DynamicResource Soft}" StrokeThickness=".8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+      </Grid>
+      <Slider x:Name="Pan" Width="100" Minimum="-100" Maximum="100" Value="0" SmallChange="1" LargeChange="10"
+       ValueChanged="SliderChanged" MouseDoubleClick="ResetPan" ToolTip="{DynamicResource 'loc:Панорама'}" AutomationProperties.Name="{DynamicResource 'loc:Панорама'}"/>
+      <TextBox x:Name="PanValue" Text="0" Width="45" Height="27" Margin="4,0,0,0" Padding="3,0"
+       TextAlignment="Center" FontFamily="Consolas" FontSize="12" MaxLength="8" ToolTip="{DynamicResource 'loc:Панорама от −100 (лево) до +100 (право)'}"
+       GotKeyboardFocus="MixValueFocus" LostKeyboardFocus="MixValueFocusLost" KeyDown="MixValueKeys" AutomationProperties.Name="{DynamicResource 'loc:Значение панорамы'}"/>
+     </StackPanel>
+     <StackPanel x:Name="ShiftPanel" Grid.Column="4" Orientation="Horizontal">
+      <TextBlock Text="{DynamicResource 'loc:СДВИГ'}" Style="{StaticResource Label}" Margin="0,0,7,0"/>
+      <Button x:Name="NudgeLeft" Style="{StaticResource Compact}" Content="‹" Width="25" Click="NudgeEarlier" ToolTip="{DynamicResource 'loc:На 10 мс раньше'}" AutomationProperties.Name="{DynamicResource 'loc:На 10 миллисекунд раньше'}"/>
+      <TextBox x:Name="Offset" Text="0" Width="64" Height="27" Margin="4,0" TextAlignment="Center" FontFamily="Consolas" FontSize="12" MaxLength="7"
+       LostKeyboardFocus="OffsetChanged" KeyDown="OffsetKeys" AutomationProperties.Name="{DynamicResource 'loc:Сдвиг в миллисекундах'}"/>
+      <Button x:Name="NudgeRight" Style="{StaticResource Compact}" Content="›" Width="25" Click="NudgeLater" ToolTip="{DynamicResource 'loc:На 10 мс позже'}" AutomationProperties.Name="{DynamicResource 'loc:На 10 миллисекунд позже'}"/>
+      <TextBlock Text="{DynamicResource 'loc:мс'}" Margin="5,0,0,0" Style="{StaticResource Label}"/>
+     </StackPanel>
+    </Grid>
+   </Grid>
+   <Button x:Name="RemoveButton" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top"
+    Width="26" Height="24" MinHeight="0" Padding="0" Background="#B9364D" BorderBrush="#D65469"
+    Click="RemoveClicked" ToolTip="{DynamicResource 'loc:Удалить дорожку'}" AutomationProperties.Name="{DynamicResource 'loc:Удалить дорожку'}">
+    <Path Width="11" Height="11" Stretch="Uniform" Data="M 1,1 L 9,9 M 9,1 L 1,9" Stroke="#FFF4F6"
+     StrokeThickness="1.75" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+   </Button>
+  </Grid>
+ </Border>
+ <Border x:Name="DropMarker" Height="2" Background="{DynamicResource Violet}" CornerRadius="1" Margin="8,0"
+  Visibility="Collapsed" IsHitTestVisible="False"/>
+ </Grid>
+</UserControl>

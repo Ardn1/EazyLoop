@@ -1,0 +1,133 @@
+<Window x:Class="EazyLoop.FxWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:local="clr-namespace:EazyLoop"
+ Title="{DynamicResource 'loc:Эффекты дорожки'}" Width="560" Height="660" MinWidth="500" MinHeight="500"
+ ShowInTaskbar="False" WindowStartupLocation="CenterOwner" FontFamily="Segoe UI" FontSize="13"
+ Background="{DynamicResource Background}" Foreground="{DynamicResource Ink}" UseLayoutRounding="True">
+ <Window.Resources>
+  <Style x:Key="FxMenu" TargetType="ContextMenu">
+   <Setter Property="Template">
+    <Setter.Value>
+     <ControlTemplate TargetType="ContextMenu">
+      <Border Background="{DynamicResource Field}" BorderBrush="{DynamicResource StrongLine}" BorderThickness="1" CornerRadius="8" Padding="4">
+       <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+      </Border>
+     </ControlTemplate>
+    </Setter.Value>
+   </Setter>
+  </Style>
+  <Style x:Key="FxMenuItem" TargetType="MenuItem">
+   <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+   <Setter Property="Template">
+    <Setter.Value>
+     <ControlTemplate TargetType="MenuItem">
+      <Border x:Name="Shell" Background="Transparent" CornerRadius="5" Padding="10,6" MinWidth="150">
+       <ContentPresenter ContentSource="Header"/>
+      </Border>
+      <ControlTemplate.Triggers>
+       <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Shell" Property="Background" Value="{DynamicResource AccentPanel}"/></Trigger>
+       <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Shell" Property="Opacity" Value=".48"/></Trigger>
+      </ControlTemplate.Triggers>
+     </ControlTemplate>
+    </Setter.Value>
+   </Setter>
+  </Style>
+ </Window.Resources>
+ <Grid Margin="18">
+  <Grid.RowDefinitions>
+   <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+  </Grid.RowDefinitions>
+  <StackPanel Margin="0,0,0,12">
+  <DockPanel Margin="0,0,0,9">
+   <ToggleButton x:Name="AllEffectsToggle" DockPanel.Dock="Right" VerticalAlignment="Center"
+    Height="29" Padding="10,0" Margin="10,0,0,0" IsChecked="True"
+    Checked="AllEffectsToggled" Unchecked="AllEffectsToggled"
+    AutomationProperties.Name="{DynamicResource 'loc:Все эффекты'}"
+    ToolTip="{DynamicResource 'loc:Включить или отключить всю обработку дорожки, включая эквалайзер.'}">
+    <ToggleButton.Style>
+     <Style TargetType="ToggleButton" BasedOn="{StaticResource PillToggle}">
+      <Setter Property="Content" Value="{DynamicResource 'loc:Все эффекты · обход'}"/>
+      <Style.Triggers>
+       <Trigger Property="IsChecked" Value="True">
+        <Setter Property="Content" Value="{DynamicResource 'loc:Все эффекты · вкл'}"/>
+       </Trigger>
+      </Style.Triggers>
+     </Style>
+    </ToggleButton.Style>
+   </ToggleButton>
+   <Border DockPanel.Dock="Left" Background="{DynamicResource AccentPanel}" CornerRadius="7" Width="40" Height="36" Margin="0,0,10,0">
+    <TextBlock Text="FX" Foreground="{DynamicResource Violet}" FontFamily="Consolas" FontWeight="Bold" FontSize="17" HorizontalAlignment="Center"/>
+   </Border>
+   <StackPanel>
+    <TextBlock x:Name="TrackTitle" FontSize="19" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+    <TextBlock Text="{DynamicResource 'loc:ЭФФЕКТЫ ДОРОЖКИ'}" Style="{StaticResource Label}" FontSize="10"/>
+   </StackPanel>
+  </DockPanel>
+   <DockPanel>
+    <Button DockPanel.Dock="Right" Style="{StaticResource Compact}" Height="29" Margin="6,0,0,0"
+     Content="{DynamicResource 'loc:Загрузить…'}" Click="LoadFxPresetClicked"
+     ToolTip="{DynamicResource 'loc:Загрузить пресет FX из файла.'}"/>
+    <Button DockPanel.Dock="Right" Style="{StaticResource Compact}" Height="29" Margin="6,0,0,0"
+     Content="{DynamicResource 'loc:Сохранить…'}" Click="SaveFxPresetClicked"
+     ToolTip="{DynamicResource 'loc:Назвать и сохранить цепочку FX и эквалайзер как пресет.'}"/>
+    <ComboBox x:Name="PresetChoice" Height="29" DisplayMemberPath="Name"
+     AutomationProperties.Name="{DynamicResource 'loc:Пресеты FX'}"
+     SelectionChanged="FxPresetChanged" DropDownOpened="FxPresetDropDownOpened"/>
+   </DockPanel>
+  </StackPanel>
+
+  <Border Grid.Row="1" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,14">
+   <StackPanel>
+    <DockPanel Margin="0,0,0,8">
+     <Button DockPanel.Dock="Right" Style="{StaticResource Compact}" Content="{DynamicResource 'loc:Сбросить'}" Click="ResetEq" Margin="5,0,0,0"/>
+     <ToggleButton x:Name="EqToggle" DockPanel.Dock="Right" Style="{StaticResource PillToggle}" Height="27" Padding="8,0"
+      IsChecked="True" Content="{DynamicResource 'loc:Вкл'}" Checked="EqToggled" Unchecked="EqToggled" AutomationProperties.Name="{DynamicResource 'loc:Включить эквалайзер'}"/>
+     <TextBlock Text="{DynamicResource 'loc:Эквалайзер'}" FontSize="15" FontWeight="SemiBold"/>
+    </DockPanel>
+    <local:EqPlot x:Name="Graph" Height="150" ToolTip="{DynamicResource 'loc:Двигайте точки по частоте и усилению. Двойной щелчок сбрасывает полосу.'}"
+     AutomationProperties.Name="{DynamicResource 'loc:График эквалайзера'}"/>
+    <UniformGrid x:Name="BandLabels" Columns="4" Margin="0,7,0,0"/>
+   </StackPanel>
+  </Border>
+
+  <Grid Grid.Row="2">
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+   <DockPanel Margin="0,0,0,7">
+    <Button x:Name="VstButton" DockPanel.Dock="Right" Style="{StaticResource Compact}" Content="+ VST3" Click="AddVstClicked"/>
+    <Button x:Name="BuiltInButton" DockPanel.Dock="Right" Style="{StaticResource Compact}" Content="{DynamicResource 'loc:+ Эффект'}" Click="AddBuiltInClicked" Margin="0,0,6,0"/>
+    <TextBlock Text="{DynamicResource 'loc:Цепочка'}" FontSize="16" FontWeight="SemiBold"/>
+   </DockPanel>
+   <ScrollViewer x:Name="ChainScroll" Grid.Row="1" Background="Transparent"
+    VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer.Resources>
+     <Style TargetType="ScrollBar">
+      <Setter Property="Width" Value="9"/>
+      <Setter Property="Template">
+       <Setter.Value>
+        <ControlTemplate TargetType="ScrollBar">
+         <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="3,0,0,0">
+          <Track.DecreaseRepeatButton>
+           <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/>
+          </Track.DecreaseRepeatButton>
+          <Track.Thumb>
+           <Thumb>
+            <Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="{DynamicResource AccentLine}" CornerRadius="3"/></ControlTemplate></Thumb.Template>
+           </Thumb>
+          </Track.Thumb>
+          <Track.IncreaseRepeatButton>
+           <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/>
+          </Track.IncreaseRepeatButton>
+         </Track>
+        </ControlTemplate>
+       </Setter.Value>
+      </Setter>
+     </Style>
+    </ScrollViewer.Resources>
+    <StackPanel x:Name="Chain" Margin="0,0,0,28"/>
+   </ScrollViewer>
+  </Grid>
+  <TextBlock Grid.Row="3" Text="{DynamicResource 'loc:Исходный WAV сохраняется сухим. Цепочка применяется при воспроизведении.'}"
+   Foreground="{DynamicResource Muted}" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"/>
+ </Grid>
+</Window>

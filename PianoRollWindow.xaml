@@ -1,0 +1,99 @@
+<Window x:Class="EazyLoop.PianoRollWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:local="clr-namespace:EazyLoop"
+ Title="{DynamicResource 'loc:Редактор MIDI · EazyLoop'}" Width="1110" Height="780" MinWidth="800" MinHeight="565"
+ WindowStartupLocation="CenterOwner" ShowInTaskbar="False" UseLayoutRounding="True"
+ FontFamily="Segoe UI" FontSize="13" Background="{DynamicResource Background}" Foreground="{DynamicResource Ink}"
+ PreviewKeyDown="WindowKeys">
+ <Grid Margin="17,13,17,12">
+  <Grid.RowDefinitions>
+   <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+   <RowDefinition Height="16"/><RowDefinition Height="Auto"/>
+  </Grid.RowDefinitions>
+  <DockPanel Margin="0,0,0,12">
+   <Button x:Name="InstrumentButton" DockPanel.Dock="Right" Width="140" Content="{DynamicResource 'loc:Инструмент…'}" Click="InstrumentClicked"/>
+   <ToggleButton x:Name="SharpButton" DockPanel.Dock="Right" Style="{StaticResource IconToggle}" Width="33" Content="♯"
+    Margin="0,0,7,0" Visibility="Collapsed" Checked="ModesChanged" Unchecked="ModesChanged"
+    ToolTip="{DynamicResource 'loc:Добавлять ноты с диезом'}" AutomationProperties.Name="{DynamicResource 'loc:Диез'}"/>
+   <ToggleButton x:Name="StaffButton" DockPanel.Dock="Right" Style="{StaticResource PillToggle}" Height="34"
+    Content="{DynamicResource 'loc:Нотный стан'}" Margin="0,0,7,0" Checked="ModesChanged" Unchecked="ModesChanged"
+    ToolTip="{DynamicResource 'loc:Переключить piano roll и нотный стан'}" AutomationProperties.Name="{DynamicResource 'loc:Нотный стан'}"/>
+   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+    <Button x:Name="UndoButton" Style="{StaticResource HistoryButton}" Content="1" Click="UndoClicked"
+     ToolTip="{DynamicResource 'loc:Отменить · Ctrl+Z'}" AutomationProperties.Name="{DynamicResource 'loc:Отменить'}"/>
+    <Button x:Name="RedoButton" Style="{StaticResource HistoryButton}" Content="-1" Click="RedoClicked" Margin="4,0,0,0"
+     ToolTip="{DynamicResource 'loc:Повторить · Ctrl+Y или Ctrl+Shift+Z'}" AutomationProperties.Name="{DynamicResource 'loc:Повторить'}"/>
+   </StackPanel>
+   <Border DockPanel.Dock="Left" Background="{DynamicResource AccentPanel}" CornerRadius="7" Padding="9,4" Margin="0,0,10,0">
+    <TextBlock Text="MIDI" FontFamily="Consolas" FontWeight="Bold" Foreground="{DynamicResource Violet}" FontSize="16"/>
+   </Border>
+   <StackPanel>
+    <TextBlock x:Name="TrackLabel" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+    <TextBlock x:Name="InstrumentLabel" FontSize="11" Foreground="{DynamicResource Muted}"/>
+   </StackPanel>
+  </DockPanel>
+  <Border Grid.Row="1" BorderThickness="1" BorderBrush="{DynamicResource Line}" CornerRadius="10"
+   Background="{DynamicResource Panel}" Padding="10,7" Margin="0,0,0,8">
+   <DockPanel>
+    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+     <TextBlock Text="{DynamicResource 'loc:МАСШТАБ'}" Style="{StaticResource Label}" Margin="0,0,5,0"/>
+     <Slider x:Name="Zoom" Width="84" Minimum="1" Maximum="8" Value="1" ValueChanged="LayoutChanged" AutomationProperties.Name="{DynamicResource 'loc:Масштаб по времени'}"/>
+    </StackPanel>
+    <WrapPanel VerticalAlignment="Center">
+     <Button x:Name="PlayButton" Style="{StaticResource Compact}" Width="83" Content="{DynamicResource 'loc:▶ Играть'}" Click="PlayClicked" ToolTip="{DynamicResource 'loc:Пробел'}"/>
+     <ToggleButton x:Name="SnapButton" Style="{StaticResource PillToggle}" Height="27" Content="{DynamicResource 'loc:Сетка'}" IsChecked="True"
+      Margin="9,0,0,0" Checked="ModesChanged" Unchecked="ModesChanged" ToolTip="{DynamicResource 'loc:Привязка нот и контроллеров к сетке'}"/>
+     <ComboBox x:Name="GridChoice" Width="72" Height="27" Margin="5,0,0,0" SelectionChanged="ModeSelectionChanged"
+      DisplayMemberPath="Name" AutomationProperties.Name="{DynamicResource 'loc:Деление сетки'}"/>
+     <TextBlock Text="{DynamicResource 'loc:ВВОД'}" Style="{StaticResource Label}" Margin="12,0,6,0"/>
+     <ComboBox x:Name="ChordChoice" Width="119" Height="27" SelectionChanged="ModeSelectionChanged"
+      DisplayMemberPath="Name" AutomationProperties.Name="{DynamicResource 'loc:Нота или аккорд'}"
+      ToolTip="{DynamicResource 'loc:Обозначения показаны от C. Основной тон задаёт высота щелчка по сетке.'}"/>
+     <ComboBox x:Name="ScaleChoice" Width="125" Height="27" Margin="8,0,0,0" Visibility="Collapsed"
+      SelectionChanged="ModeSelectionChanged" DisplayMemberPath="Name"
+      AutomationProperties.Name="{DynamicResource 'loc:Гамма'}"
+      ToolTip="{DynamicResource 'loc:Гамма для SimpleChord и SimpleChord4. Точки отмечают ноты гаммы.'}"/>
+     <StackPanel Orientation="Horizontal" Margin="9,0,0,0">
+      <Button x:Name="CopyButton" Style="{StaticResource Compact}" Content="{DynamicResource 'loc:Копировать'}" Click="CopyClicked"
+       ToolTip="{DynamicResource 'loc:Ctrl+C. Потяните от пустого места, чтобы выделить ноты рамкой.'}"/>
+      <Button Style="{StaticResource Compact}" Content="{DynamicResource 'loc:Вставить'}" Click="PasteClicked"
+       Margin="5,0,0,0" ToolTip="{DynamicResource 'loc:Щёлкните по линейке тактов, затем нажмите Ctrl+V.'}"/>
+     </StackPanel>
+    </WrapPanel>
+   </DockPanel>
+  </Border>
+  <Border Grid.Row="2" BorderBrush="{DynamicResource Line}" BorderThickness="1" Background="{DynamicResource Surface}" CornerRadius="5" ClipToBounds="True">
+   <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="15"/></Grid.ColumnDefinitions>
+    <local:PianoRollSurface x:Name="Roll" SizeChanged="RollResized" AutomationProperties.Name="{DynamicResource 'loc:Пианино, ноты и контроллеры'}"/>
+    <ScrollBar x:Name="PitchScrollBar" Grid.Column="1" Style="{StaticResource PianoScroll}" Orientation="Vertical" Minimum="0" Maximum="100" Value="51"
+     SmallChange="1" LargeChange="12" ViewportSize="24" ValueChanged="LayoutChanged" AutomationProperties.Name="{DynamicResource 'loc:Октавы'}"/>
+   </Grid>
+  </Border>
+  <ScrollBar x:Name="TimeScrollBar" Grid.Row="3" Style="{StaticResource PianoScroll}" Orientation="Horizontal" Minimum="0" Maximum="0" Value="0"
+   SmallChange="240" LargeChange="960" Margin="68,0,15,0" ValueChanged="LayoutChanged" AutomationProperties.Name="{DynamicResource 'loc:Прокрутка по времени'}"/>
+  <Grid Grid.Row="4" Margin="0,7,0,0">
+   <StackPanel Orientation="Horizontal">
+    <TextBlock Text="{DynamicResource 'loc:ДОРОЖКА КОНТРОЛЛЕРА'}" Style="{StaticResource Label}" Margin="0,0,7,0"/>
+    <ComboBox x:Name="LaneChoice" Width="145" Height="30" DisplayMemberPath="Name" SelectionChanged="ModeSelectionChanged"
+     AutomationProperties.Name="{DynamicResource 'loc:Контроллер'}"/>
+   </StackPanel>
+   <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" x:Name="NoteInspector">
+    <TextBlock Text="{DynamicResource 'loc:НОТА'}" Style="{StaticResource Label}" Margin="0,0,5,0"/>
+    <TextBox x:Name="NotePitch" Width="52" Height="29" Padding="4,0" TextAlignment="Center" Margin="0,0,9,0"
+     KeyDown="FieldKeys" LostKeyboardFocus="FieldLost" ToolTip="{DynamicResource 'loc:Например C4, F#4 или MIDI 60'}" AutomationProperties.Name="{DynamicResource 'loc:Высота ноты'}"/>
+    <TextBlock Text="{DynamicResource 'loc:ПОЗИЦИЯ'}" Style="{StaticResource Label}" Margin="0,0,5,0"/>
+    <TextBox x:Name="NotePosition" Width="78" Height="29" Padding="4,0" TextAlignment="Center" KeyDown="FieldKeys" LostKeyboardFocus="FieldLost"
+     ToolTip="{DynamicResource 'loc:Такт.доля.тик, такт и доля от 1'}" AutomationProperties.Name="{DynamicResource 'loc:Позиция ноты'}"/>
+    <TextBlock Text="{DynamicResource 'loc:ДЛИНА'}" Style="{StaticResource Label}" Margin="9,0,5,0"/>
+    <TextBox x:Name="NoteLength" Width="55" Height="29" Padding="4,0" TextAlignment="Center" KeyDown="FieldKeys" LostKeyboardFocus="FieldLost"
+     ToolTip="{DynamicResource 'loc:Длина в долях'}" AutomationProperties.Name="{DynamicResource 'loc:Длина ноты в долях'}"/>
+    <TextBlock Text="{DynamicResource 'loc:СИЛА'}" Style="{StaticResource Label}" Margin="9,0,5,0"/>
+    <TextBox x:Name="NoteVelocity" Width="43" Height="29" Padding="4,0" TextAlignment="Center" KeyDown="FieldKeys" LostKeyboardFocus="FieldLost"
+     ToolTip="{DynamicResource 'loc:Velocity от 1 до 127'}" AutomationProperties.Name="{DynamicResource 'loc:Сила нажатия ноты'}"/>
+    <Button Style="{StaticResource Compact}" Content="×" Width="30" Padding="0" Margin="5,0,0,0" Click="DeleteClicked" ToolTip="{DynamicResource 'loc:Удалить выделенные ноты'}"/>
+   </StackPanel>
+  </Grid>
+ </Grid>
+</Window>

@@ -1,0 +1,77 @@
+<Window x:Class="EazyLoop.ThemeColorWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:local="clr-namespace:EazyLoop"
+ Title="{DynamicResource 'loc:Выбор цвета'}" Width="588" SizeToContent="Height" ResizeMode="NoResize"
+ ShowInTaskbar="False" WindowStartupLocation="CenterOwner" FontFamily="Segoe UI" FontSize="13"
+ Background="{DynamicResource Background}" Foreground="{DynamicResource Ink}">
+ <Window.Resources>
+  <Style x:Key="ChannelSlider" TargetType="Slider" BasedOn="{StaticResource {x:Type Slider}}">
+   <Setter Property="Height" Value="22"/>
+   <Setter Property="Template">
+    <Setter.Value>
+     <ControlTemplate TargetType="Slider">
+      <Grid Background="Transparent">
+       <Border x:Name="Rail" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource StrongLine}"
+        BorderThickness="1" CornerRadius="4" Height="12" Margin="5,0"/>
+       <Track x:Name="PART_Track" Orientation="Horizontal" VerticalAlignment="Center">
+        <Track.Thumb>
+         <Thumb Width="12" Height="20">
+          <Thumb.Template>
+           <ControlTemplate TargetType="Thumb">
+            <Border Width="8" Background="White" BorderBrush="#272933" BorderThickness="1" CornerRadius="3"/>
+           </ControlTemplate>
+          </Thumb.Template>
+         </Thumb>
+        </Track.Thumb>
+       </Track>
+      </Grid>
+      <ControlTemplate.Triggers>
+       <Trigger Property="IsKeyboardFocused" Value="True">
+        <Setter TargetName="Rail" Property="BorderBrush" Value="{DynamicResource Violet}"/>
+       </Trigger>
+      </ControlTemplate.Triggers>
+     </ControlTemplate>
+    </Setter.Value>
+   </Setter>
+  </Style>
+ </Window.Resources>
+ <StackPanel Margin="18">
+  <TextBlock x:Name="RoleTitle" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,0,0,11"/>
+  <Grid>
+   <Grid.ColumnDefinitions><ColumnDefinition Width="230"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="10" Padding="8">
+    <StackPanel>
+     <local:ThemeColorWheel x:Name="Wheel" Height="213"
+      AutomationProperties.Name="{DynamicResource 'loc:Цветовой круг'}"
+      ToolTip="{DynamicResource 'loc:Цветовой круг меняет тон и насыщенность. Яркость регулируется полоской V.'}"/>
+     <Border x:Name="PreviewColor" Height="35" Margin="8,6,8,3"
+      BorderThickness="1" BorderBrush="{DynamicResource StrongLine}" CornerRadius="6"/>
+    </StackPanel>
+   </Border>
+   <Border Grid.Column="2" Background="{DynamicResource Panel}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="10" Padding="12,9">
+    <StackPanel>
+     <TextBlock Text="RGB" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+     <StackPanel x:Name="RgbChannels"/>
+     <DockPanel Margin="0,2,0,8">
+      <TextBox x:Name="HexValue" DockPanel.Dock="Right" Width="97" Height="27" MaxLength="7"
+       FontSize="12" FontFamily="Consolas" TextAlignment="Center" AutomationProperties.Name="HEX"/>
+      <TextBlock Text="HEX" FontFamily="Consolas" Foreground="{DynamicResource Soft}"/>
+     </DockPanel>
+     <TextBlock Text="HSV" Style="{StaticResource Label}" Margin="0,0,0,4"/>
+     <StackPanel x:Name="HsvChannels"/>
+    </StackPanel>
+   </Border>
+  </Grid>
+  <DockPanel Margin="0,12,0,0">
+   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+    <Button Style="{StaticResource Compact}" IsCancel="True" Content="{DynamicResource 'loc:Отмена'}"/>
+    <Button x:Name="ApplyButton" Style="{StaticResource Compact}" IsDefault="True" Click="ApplyClicked"
+     Margin="8,0,0,0" Background="{DynamicResource Violet}" BorderBrush="{DynamicResource Violet}">
+     <TextBlock Text="{DynamicResource 'loc:Применить'}" Foreground="{DynamicResource OnAccent}"/>
+    </Button>
+   </StackPanel>
+   <TextBlock x:Name="Validation" Foreground="{DynamicResource Rose}" FontSize="11" TextWrapping="Wrap" Margin="0,0,10,0"/>
+  </DockPanel>
+ </StackPanel>
+</Window>

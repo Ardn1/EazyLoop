@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>EazyLoop</AssemblyName>
+    <Product>EazyLoop</Product>
+    <Version>0.7.10-beta</Version>
+    <ApplicationIcon>EazyLoop.ico</ApplicationIcon>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NAudio.Wasapi" Version="3.3.0" />
+    <PackageReference Include="NAudio.WinMM" Version="3.3.0" />
+    <PackageReference Include="NAudio.Vst3" Version="3.3.0" />
+    <EmbeddedResource Include="NAudio-LICENSE.txt" />
+    <EmbeddedResource Include="ThirdParty/RNNoise/RNNoise-LICENSE.txt" LogicalName="EazyLoop.RNNoise-LICENSE.txt" />
+    <None Update="ThirdParty/RNNoise/RNNoise-LICENSE.txt" Link="RNNoise-LICENSE.txt"
+          CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Update="ThirdParty/RNNoise/win-x64/eazyloop-rnnoise.dll" Link="eazyloop-rnnoise.dll"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+          Condition="'$(RuntimeIdentifier)' == '' Or '$(RuntimeIdentifier)' == 'win-x64'" />
+    <EmbeddedResource Include="Languages/*.json" WithCulture="false" />
+    <None Update="Languages/*.json" CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+</Project>
