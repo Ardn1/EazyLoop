@@ -43,6 +43,7 @@ public partial class AudioEditorWindow : Window
             if (!playing) Timeline.Playhead(parked = frame);
         };
         Timeline.ZoomRequested += direction => Zoom.Value += direction;
+        Timeline.WaveZoomRequested += direction => WaveZoom.Value += direction;
         UpdateViewport();
         UpdateHistory();
         UpdateSelection();
@@ -129,6 +130,14 @@ public partial class AudioEditorWindow : Window
     private void ZoomChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (history != null) UpdateViewport();
+    }
+
+    private void WaveZoomChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (Timeline == null) return;
+        double scale = Math.Pow(2, e.NewValue);
+        Timeline.SetWaveScale(scale);
+        WaveZoomValue.Text = $"{scale:0}×";
     }
 
     private void ScrollChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

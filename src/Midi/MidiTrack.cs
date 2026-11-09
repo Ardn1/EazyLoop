@@ -78,7 +78,7 @@ internal sealed record MidiTrackSettings(SynthPatch? Synth, VstReference? Plugin
     }
 }
 
-internal sealed class MidiTrack : IDisposable
+internal sealed partial class MidiTrack : IDisposable
 {
     private enum Message { Control, Off, On }
     private readonly record struct Event(int Tick, Message Kind, int Key, int Value, Guid NoteId = default, int EndTick = 0,
@@ -118,6 +118,7 @@ internal sealed class MidiTrack : IDisposable
         {
             synth = new SimpleSynth(patch, settings.Glissando?.Curve);
             previewSynth = new SimpleSynth(patch, settings.Glissando?.Curve);
+            liveSynth = new SimpleSynth(patch, settings.Glissando?.Curve);
         }
         if (settings.Drums != null) drums = new SimpleDrums(settings.Drums);
         reference = settings.Plugin;
@@ -140,7 +141,7 @@ internal sealed class MidiTrack : IDisposable
     public MidiNote[] Notes => Volatile.Read(ref sequence).Notes;
     public MidiPoint[] Points => Volatile.Read(ref sequence).Points;
     public bool HasPreview => Volatile.Read(ref pendingPreview) != null || Volatile.Read(ref previewRemaining) > 0 ||
-        Volatile.Read(ref pendingSynthNote) != null || previewSynth?.HasVoices == true;
+        Volatile.Read(ref pendingSynthNote) != null || previewSynth?.HasVoices == true || HasLiveNotes;
     public bool CanPlay => synth != null || drums != null || (Plugin != null && Error == null);
 
     public MidiTrackSettings Snapshot()
@@ -249,6 +250,8 @@ internal sealed class MidiTrack : IDisposable
             if (playing) RenderSequence(output, grid, phase, currentEpoch);
             else RenderPreview(output, grid);
             MixSynthPreview(output);
+            if (liveSynth?.HasVoices == true) liveSynth.MixInto(output);
+            liveTail = Math.Max(0, liveTail - output.Length / 2);
             wasPlaying = playing;
         }
         catch (Exception ex)
@@ -275,6 +278,8 @@ internal sealed class MidiTrack : IDisposable
         if (drums != null && preview != null)
             foreach (int key in preview.Notes) drums.Hit(key, preview.Velocity);
         Volatile.Write(ref previewRemaining, 0);
+        auditionOff = 0;
+        ApplyLiveNotes();
 
         while (remaining > 0)
         {
@@ -341,10 +346,14 @@ internal sealed class MidiTrack : IDisposable
 
     private void RenderPreview(Span<float> output, LoopGrid grid)
     {
+        if (wasPlaying)
+        {
+            Reset();
+            drums?.Reset();
+        }
         if (Interlocked.Exchange(ref pendingPreview, null) is { } preview)
         {
-            if (wasPlaying) drums?.Reset();
-            Reset();
+            if (!wasPlaying) Reset();
             int duration = Curve == null ? LoopEngine.Rate / 3 : LoopEngine.Rate;
             auditionCount = Math.Min(preview.Notes.Length, auditions.Length);
             for (int i = 0; i < auditionCount; i++)
@@ -358,14 +367,16 @@ internal sealed class MidiTrack : IDisposable
             auditionOff = duration;
         }
 
-        int offset = 0, remaining = Math.Min(output.Length / 2, previewRemaining);
+        ApplyLiveNotes();
+        int framesToPlay = pluginLiveKeys > 0 ? output.Length / 2 : Math.Max(previewRemaining, liveTail);
+        int offset = 0, remaining = Math.Min(output.Length / 2, framesToPlay);
         while (remaining > 0)
         {
             int frames = auditionOff > 0 ? Math.Min(auditionOff, remaining) : remaining;
             Process(output.Slice(offset * 2, frames * 2), grid, 0, false);
             offset += frames;
             remaining -= frames;
-            Volatile.Write(ref previewRemaining, previewRemaining - frames);
+            Volatile.Write(ref previewRemaining, Math.Max(0, previewRemaining - frames));
             if (auditionOff > 0 && (auditionOff -= frames) == 0)
                 for (int i = 0; i < auditionCount; i++) Apply(new Event(0, Message.Off, auditions[i], 0), grid, 0);
         }
@@ -406,10 +417,22 @@ internal sealed class MidiTrack : IDisposable
 
     private void Reset()
     {
+        if (plugin is { } instrument)
+        {
+            if (pluginLiveKeys == 0)
+            {
+                instrument.ResetEventSchedule();
+                instrument.AllNotesOff();
+            }
+            else
+            {
+                // A transport seek should release sequenced notes and keep the keys being played live.
+                for (int key = 0; key < held.Length; key++)
+                    if (held[key] > 0 && liveHeld[key] == 0) instrument.EnqueueNoteOff(key);
+            }
+        }
         Array.Clear(held);
         synth?.Reset();
-        plugin?.ResetEventSchedule();
-        plugin?.AllNotesOff();
         volume = expression = 1;
         pan = 0;
         Control(MidiLane.Sustain, 0);
@@ -440,12 +463,12 @@ internal sealed class MidiTrack : IDisposable
         {
             if (held[e.Key]++ > 0) return;
             synth?.On(e.Key, e.Value, previewDuration);
-            plugin?.EnqueueNoteOn(e.Key, e.Value / 127f);
+            if (liveHeld[e.Key] == 0) plugin?.EnqueueNoteOn(e.Key, e.Value / 127f);
         }
         else if (held[e.Key] > 0 && --held[e.Key] == 0)
         {
             synth?.Off(e.Key);
-            plugin?.EnqueueNoteOff(e.Key);
+            if (liveHeld[e.Key] == 0) plugin?.EnqueueNoteOff(e.Key);
         }
     }
 

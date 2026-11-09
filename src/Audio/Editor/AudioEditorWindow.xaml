@@ -25,6 +25,12 @@
    CornerRadius="9" Padding="9,7" Margin="0,0,0,8">
    <DockPanel>
     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+     <TextBlock Text="{DynamicResource 'loc:ВОЛНА'}" Style="{StaticResource Label}" Margin="0,0,6,0"/>
+     <Slider x:Name="WaveZoom" Minimum="0" Maximum="6" Value="0" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True"
+      Width="82" ValueChanged="WaveZoomChanged" ToolTip="{DynamicResource 'loc:Высота волны · Alt+колесо'}"
+      AutomationProperties.Name="{DynamicResource 'loc:Масштаб волны'}"/>
+     <TextBlock x:Name="WaveZoomValue" Text="1×" Width="29" Margin="4,0,12,0" VerticalAlignment="Center"
+      Foreground="{DynamicResource Soft}" FontSize="11" FontFamily="Consolas"/>
      <TextBlock Text="{DynamicResource 'loc:МАСШТАБ'}" Style="{StaticResource Label}" Margin="0,0,6,0"/>
      <Slider x:Name="Zoom" Minimum="0" Maximum="6" Value="0" SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True"
       Width="82" ValueChanged="ZoomChanged" AutomationProperties.Name="{DynamicResource 'loc:МАСШТАБ'}"/>

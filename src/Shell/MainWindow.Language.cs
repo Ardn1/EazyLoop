@@ -8,7 +8,13 @@ namespace EazyLoop;
 
 public partial class MainWindow
 {
-    private void UpdateLanguageIcon() => LanguageButton.Content = LanguageIcon(Locale.Current);
+    private void UpdateLanguageHeader()
+    {
+        string version = typeof(MainWindow).Assembly.GetName().Version!.ToString(3);
+        Title = Locale.F($"EazyLoop {version} · гитарный лупер");
+        BetaBadge.Text = Locale.F($"БЕТА {version}");
+        LanguageButton.Content = LanguageIcon(Locale.Current);
+    }
 
     private void HeaderPickerClicked(object sender, RoutedEventArgs e)
     {
@@ -54,7 +60,7 @@ public partial class MainWindow
             if (language != Locale.Current)
             {
                 Locale.Select(language);
-                UpdateLanguageIcon();
+                UpdateLanguageHeader();
                 UpdateGridLength();
                 UpdateProjectHeader();
                 RefreshLocalizedInputs();

@@ -28,7 +28,7 @@ internal sealed class ProjectStore : IDisposable
     private sealed record ProjectFile(int Version, ProjectSettings Settings, TrackSettings[] Tracks,
         Guid[]? PendingDeletes);
 
-    private const int Version = 10;
+    private const int Version = 11;
     private const int MaxManifestBytes = 16 * 1024 * 1024;
     private const int ChunkSize = 64 * 1024;
     private static readonly int MaxFrames = new LoopGrid(40, 7, 16).Frames;
@@ -131,7 +131,8 @@ internal sealed class ProjectStore : IDisposable
         var nextAudio = snapshot.Tracks.Where(track => track.Settings.Frames > 0)
             .ToDictionary(track => track.Settings.Id, track => (track.Settings.Frames, track.Samples));
         var deleted = pendingDeletes.Concat(audioOnDisk.Keys).Except(nextAudio.Keys).ToHashSet();
-        int version = tracks.Any(track => track.AudioEdit != null) ? Version :
+        int version = tracks.Any(track => track.Volume > 1) ? Version :
+            tracks.Any(track => track.AudioEdit != null) ? 10 :
             tracks.Any(track => track.Midi?.Glissando?.Timeline != null) ? 9 :
             tracks.Any(track => (track.Midi?.Synth ?? track.Midi?.Glissando?.Voice) is { Blend: > 0 }) ? 8 :
             tracks.Any(track => track.Fx?.Slots.Any(slot => slot.Kind == FxKind.PitchCorrection) == true) ? 7 :
@@ -205,6 +206,7 @@ internal sealed class ProjectStore : IDisposable
 
         var ids = new HashSet<Guid>();
         var numbers = new HashSet<int>();
+        float maxVolume = file.Version >= 11 ? 2f : 1f;
         foreach (var track in file.Tracks)
         {
             if (track?.Fx is { } fx && !FxCatalog.IsValid(fx))
@@ -216,7 +218,7 @@ internal sealed class ProjectStore : IDisposable
                 track.Frames < 0 || track.Frames > MaxFrames ||
                 (track.AudioEdit is { } edit && (file.Version < 10 || !edit.IsValid(track.Frames, MaxFrames))) ||
                 track.Shift < -grid.Frames / 2 || track.Shift > grid.Frames / 2 ||
-                !float.IsFinite(track.Volume) || track.Volume is < 0 or > 1 ||
+                !float.IsFinite(track.Volume) || track.Volume < 0 || track.Volume > maxVolume ||
                 !float.IsFinite(track.Pan) || track.Pan is < -1 or > 1 ||
                 !double.IsFinite(track.Zoom) || track.Zoom is < -2 or > 4 ||
                 track.Name is { Length: > TrackSettings.MaxNameLength } ||

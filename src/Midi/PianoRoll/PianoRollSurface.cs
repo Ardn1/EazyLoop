@@ -7,7 +7,7 @@ namespace EazyLoop;
 
 public sealed partial class PianoRollSurface : ThemedCanvas
 {
-    private const double Keys = 68, Ruler = 26, Row = 19, LaneHeight = 104;
+    private const double Keys = 68, Ruler = 26, Row = 19, LaneHeight = 104, VelocityBarWidth = 4;
     private static readonly Brush KeyWhite = Ink("#D7D8E4"), KeyBlack = Ink("#38394A"), KeyEdge = Ink("#A8ABBF");
     private static readonly Brush KeyLabel = Ink("#241D36");
     private static Brush Dark => ThemeManager.Brush("Background");
@@ -33,9 +33,11 @@ public sealed partial class PianoRollSurface : ThemedCanvas
     private enum Drag { None, Move, Resize, Marquee, Velocity, StaffVelocity, Control }
     private Drag drag;
     private Point anchor;
+    private Point? velocityStroke;
     private bool dragMoved, extendSelection;
     private Rect marquee = Rect.Empty;
     private MidiNote? noteToPreview;
+    private int? mouseKey;
     private MidiNote[] originals = [];
     private int controlTick;
     private int gestureTick;
@@ -93,7 +95,11 @@ public sealed partial class PianoRollSurface : ThemedCanvas
         grid = value; zoom = Math.Max(1, scale); leftTick = Math.Clamp(offset, 0, MaxOffset);
         if (pasteTick is int tick && tick >= MidiTrackSettings.Ticks(grid)) pasteTick = null;
         topPitch = Math.Clamp(pitch, Math.Min(PitchUnits - 1, RowsVisible - 1), PitchUnits - 1);
-        if (lane != channel) laneValue = null;
+        if (lane != channel)
+        {
+            EndVelocityStroke();
+            laneValue = null;
+        }
         lane = channel;
         InvalidateRoll();
     }
@@ -308,7 +314,7 @@ public sealed partial class PianoRollSurface : ThemedCanvas
                 if (note.Start < leftTick || note.Start >= lastTick) continue;
                 double y = ValueY(note.Velocity);
                 drawing.DrawRoundedRectangle(selection.Contains(note.Id) ? SelectedNote : Note, null,
-                    new Rect(X(note.Start), y, 4, Math.Max(1, ActualHeight - y - 8)), 1, 1);
+                    new Rect(X(note.Start), y, VelocityBarWidth, Math.Max(1, ActualHeight - y - 8)), 1, 1);
             }
             return;
         }
@@ -344,9 +350,22 @@ public sealed partial class PianoRollSurface : ThemedCanvas
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
+        if (velocityStroke != null)
+        {
+            e.Handled = true;
+            return;
+        }
         Focus();
+        Point point = e.GetPosition(this);
+        if (point.X < Keys)
+        {
+            if (track != null && point.Y >= Ruler && point.Y < LaneTop && CaptureMouse())
+                PlayMouseKey(point);
+            e.Handled = true;
+            return;
+        }
         GestureStarted?.Invoke();
-        BeginGesture(e.GetPosition(this), Keyboard.Modifiers.HasFlag(ModifierKeys.Control));
+        BeginGesture(point, Keyboard.Modifiers.HasFlag(ModifierKeys.Control));
         e.Handled = true;
         if (drag == Drag.None || !CaptureMouse()) GestureEnded?.Invoke();
     }
@@ -357,11 +376,6 @@ public sealed partial class PianoRollSurface : ThemedCanvas
         drag = Drag.None;
         dragMoved = false;
         noteToPreview = null;
-        if (p.X < Keys)
-        {
-            if (p.Y >= Ruler && p.Y < LaneTop) track.Preview([Pitch(p.Y)]);
-            return;
-        }
         if (p.Y < Ruler)
         {
             pasteTick = Math.Clamp(InsertTime(Tick(p.X)), 0, MidiTrackSettings.Ticks(grid) - 1);
@@ -446,7 +460,16 @@ public sealed partial class PianoRollSurface : ThemedCanvas
         if (track == null) return;
         Point p = e.GetPosition(this);
         if (p.X < Keys) return;
-        if (p.Y >= LaneTop && lane != MidiLane.Velocity)
+        if (IsVelocityLane(p))
+        {
+            if (!IsMouseCaptured)
+            {
+                Focus();
+                GestureStarted?.Invoke();
+                PaintVelocity(p);
+            }
+        }
+        else if (p.Y >= LaneTop && lane != MidiLane.Velocity)
         {
             var point = track.Points.Where(x => x.Lane == lane).OrderBy(x => Math.Abs(X(x.Tick) - p.X)).FirstOrDefault();
             if (point != null && Math.Abs(X(point.Tick) - p.X) < 14)
@@ -460,6 +483,67 @@ public sealed partial class PianoRollSurface : ThemedCanvas
         e.Handled = true;
     }
 
+    protected override void OnMouseRightButtonUp(MouseButtonEventArgs e)
+    {
+        if (velocityStroke == null) return;
+        Point point = e.GetPosition(this);
+        if (point != velocityStroke.Value) PaintVelocity(point);
+        EndVelocityStroke();
+        e.Handled = true;
+    }
+
+    private bool IsVelocityLane(Point point) =>
+        lane == MidiLane.Velocity && point.X >= Keys && point.X < ActualWidth &&
+        point.Y >= LaneTop && point.Y < ActualHeight;
+
+    private void PaintVelocity(Point point)
+    {
+        Point from = velocityStroke ?? point;
+        velocityStroke = point;
+        if (track == null || lane != MidiLane.Velocity) return;
+
+        double dx = point.X - from.X, dy = point.Y - from.Y;
+        double start = 0, end = 1;
+        if (dy == 0)
+        {
+            if (from.Y < LaneTop || from.Y >= ActualHeight) return;
+        }
+        else
+        {
+            double top = (LaneTop - from.Y) / dy, bottom = (ActualHeight - from.Y) / dy;
+            start = Math.Max(0, Math.Min(top, bottom));
+            end = Math.Min(1, Math.Max(top, bottom));
+            if (start > end) return;
+        }
+        double firstX = from.X + dx * start, lastX = from.X + dx * end;
+        double left = Math.Min(firstX, lastX), right = Math.Max(firstX, lastX);
+        var notes = track.Notes;
+        MidiNote[]? edited = null;
+        for (int i = 0; i < notes.Length; i++)
+        {
+            var note = notes[i];
+            if (note.Start < leftTick) continue;
+            double x = X(note.Start);
+            if (x >= ActualWidth || x > right || x + VelocityBarWidth < left) continue;
+            // Follow the stroke between mouse events so a fast sweep still hits every bar.
+            double progress = dx == 0 ? end : Math.Clamp((x + VelocityBarWidth / 2 - from.X) / dx, start, end);
+            int velocity = Math.Clamp(ValueAt(from.Y + dy * progress), 1, 127);
+            if (note.Velocity == velocity) continue;
+            edited ??= (MidiNote[])notes.Clone();
+            edited[i] = note with { Velocity = velocity };
+        }
+        if (edited == null) return;
+        laneValue = Math.Clamp(ValueAt(from.Y + dy * end), 1, 127);
+        ApplyNotes(edited);
+    }
+
+    private void EndVelocityStroke()
+    {
+        if (velocityStroke == null) return;
+        velocityStroke = null;
+        GestureEnded?.Invoke();
+    }
+
     protected override void OnMouseEnter(MouseEventArgs e)
     {
         base.OnMouseEnter(e);
@@ -469,15 +553,47 @@ public sealed partial class PianoRollSurface : ThemedCanvas
     protected override void OnMouseLeave(MouseEventArgs e)
     {
         base.OnMouseLeave(e);
+        if (velocityStroke != null && e.RightButton == MouseButtonState.Pressed)
+            PaintVelocity(e.GetPosition(this));
+        EndVelocityStroke();
         UpdateHover(null);
+    }
+
+    protected override void OnLostKeyboardFocus(KeyboardFocusChangedEventArgs e)
+    {
+        EndVelocityStroke();
+        base.OnLostKeyboardFocus(e);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
         Point point = e.GetPosition(this);
-        if (drag != Drag.None && IsMouseCaptured) EditDrag(point);
+        if (velocityStroke != null)
+        {
+            if (e.RightButton == MouseButtonState.Pressed) PaintVelocity(point);
+            else EndVelocityStroke();
+        }
+        else if (mouseKey != null && IsMouseCaptured) PlayMouseKey(point);
+        else if (drag != Drag.None && IsMouseCaptured) EditDrag(point);
         UpdateHover(point);
+    }
+
+    private void PlayMouseKey(Point point)
+    {
+        if (point.X < 0 || point.X >= Keys || point.Y < Ruler || point.Y >= LaneTop) return;
+        int key = Pitch(point.Y);
+        if (mouseKey == key) return;
+        ReleaseMouseKey();
+        mouseKey = key;
+        track!.PlayLiveNote(key, MidiTrackSettings.Default(MidiLane.Velocity));
+    }
+
+    private void ReleaseMouseKey()
+    {
+        if (mouseKey is not int key) return;
+        track?.PlayLiveNote(key, 0);
+        mouseKey = null;
     }
 
     protected override void OnQueryCursor(QueryCursorEventArgs e)
@@ -557,7 +673,7 @@ public sealed partial class PianoRollSurface : ThemedCanvas
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         if (!IsMouseCaptured) return;
-        EndGesture(e.GetPosition(this));
+        if (mouseKey == null) EndGesture(e.GetPosition(this));
         ReleaseMouseCapture();
         e.Handled = true;
     }
@@ -590,6 +706,8 @@ public sealed partial class PianoRollSurface : ThemedCanvas
 
     protected override void OnLostMouseCapture(MouseEventArgs e)
     {
+        bool keyGesture = mouseKey != null;
+        ReleaseMouseKey();
         drag = Drag.None;
         originals = [];
         noteToPreview = null;
@@ -598,7 +716,7 @@ public sealed partial class PianoRollSurface : ThemedCanvas
             marquee = Rect.Empty;
             InvalidateVisual();
         }
-        GestureEnded?.Invoke();
+        if (!keyGesture) GestureEnded?.Invoke();
         UpdateHover(IsMouseOver ? e.GetPosition(this) : null);
         base.OnLostMouseCapture(e);
     }

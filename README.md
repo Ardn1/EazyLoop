@@ -27,11 +27,24 @@ EazyLoop — мини-секвенсор для быстрого создани�
 
 </details>
 
+## Структура проекта
+
+| Папка | Содержимое |
+| --- | --- |
+| `src/Shell`, `src/Tracks` | Главное окно, транспорт и карточки дорожек |
+| `src/Audio`, `src/Effects` | Аудиодвижок, редактор записи, анализ сигнала и эффекты |
+| `src/Midi` | MIDI-дорожки, piano roll, ударные, глиссандо и синтезатор |
+| `src/Projects`, `src/Infrastructure` | Хранение проектов, локализация и история правок |
+| `src/Themes`, `assets`, `Languages` | Темы, значок приложения и переводы |
+| `scripts`, `docs`, `ThirdParty` | Выпуск сборок, руководство и сторонние компоненты |
+
 ## Сборка
 
-Windows x64, .NET 10 SDK и WPF. Команда портативной сборки из корня репозитория:
+Windows x64, .NET 10 SDK и WPF. Для проверки исходников выполните `dotnet build EazyLoop.csproj`. Для выпуска портативной сборки выполните из основного рабочего дерева:
 
-    dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o dist/portable
+    .\scripts\Publish-Local.ps1
+
+Скрипт назначает следующий номер и сохраняет сборку в `dist\<версия>`. Параметр `-UpdateDesktopShortcut` также обновляет ярлык EazyLoop. Порядок работы из нескольких чатов описан в [AGENTS.md](AGENTS.md).
 
 ## Лицензии
 

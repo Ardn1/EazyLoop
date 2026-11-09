@@ -7,7 +7,6 @@ public partial class TrackRow
 {
     private AudioEditorWindow? audioEditor;
     internal event Action? SaveAudioProjectRequested;
-    internal event Action<int>? AudioSeekRequested;
 
     private void OpenAudioEditor()
     {
@@ -20,7 +19,7 @@ public partial class TrackRow
         audioEditor = new AudioEditorWindow(Data.Samples, Data.Length, Data.Audio?.Edit, TrackName.Text, grid,
             ApplyAudioEdit, () => SaveAudioProjectRequested?.Invoke(),
             () => ToggleTransportRequested?.Invoke(), frame =>
-                AudioSeekRequested?.Invoke(LoopEngine.Mod((long)frame + Data.Shift, grid.Frames)))
+                SeekRequested?.Invoke(LoopEngine.Mod((long)frame + Data.Shift, grid.Frames)))
         {
             Owner = Window.GetWindow(this)
         };

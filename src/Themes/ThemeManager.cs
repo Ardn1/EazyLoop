@@ -42,9 +42,11 @@ internal static class ThemeManager
 {
     private sealed record Settings(string Selected, UiTheme[] Custom);
 
+    private static readonly ThemePalette Classic = new("#101119", "#191B27", "#202231", "#F4F3FA", "#BAAAFF", "#86E7CC");
     private static readonly UiTheme[] BuiltIn =
     [
-        new("classic", "Классическая", new("#101119", "#191B27", "#202231", "#F4F3FA", "#BAAAFF", "#86E7CC")),
+        new("classic", "Классическая", Classic),
+        new("classic-blue", "Классическая голубая", Classic with { Accent = "#A4CAFF" }),
         new("graphite", "Графит", new("#111315", "#1C2025", "#272C32", "#F0F3F6", "#CBD5E3", "#8EE6BA")),
         new("cobalt", "Кобальт", new("#0B1323", "#12223C", "#1B3050", "#EAF3FF", "#80B8FF", "#8BE6F0")),
         new("forest", "Хвоя", new("#0D1711", "#17271C", "#223729", "#EFF9E9", "#B7DD88", "#8CE3BF")),

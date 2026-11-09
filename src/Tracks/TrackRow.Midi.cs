@@ -9,9 +9,18 @@ public partial class TrackRow
     private GlissandoTimelineWindow? glissandoEditor;
     private DrumWindow? drumEditor;
     private DrumSettingsWindow? drumSettings;
+    private bool midiInputTarget;
     internal bool IsMidi => Data.Midi != null;
     private bool IsDrums => Data.Midi?.Kit != null;
     internal event Action? ToggleTransportRequested;
+    internal event Action? MidiTargetRequested;
+
+    internal void SetMidiInputTarget(bool value)
+    {
+        midiInputTarget = value;
+        TrackInfo.Text = Description();
+        UpdateTrackAppearance();
+    }
 
     private void SetupMidi()
     {
@@ -45,12 +54,14 @@ public partial class TrackRow
     internal void OpenMidi()
     {
         if (Data.Midi is not { } midi) return;
+        MidiTargetRequested?.Invoke();
         if (midi.Timeline != null)
         {
             if (glissandoEditor != null) { glissandoEditor.Activate(); return; }
             glissandoEditor = new GlissandoTimelineWindow(midi, TrackName.Text, grid, MidiEdited,
                 () => ToggleTransportRequested?.Invoke()) { Owner = Window.GetWindow(this) };
             glissandoEditor.Closed += (_, _) => glissandoEditor = null;
+            glissandoEditor.Activated += (_, _) => MidiTargetRequested?.Invoke();
             glissandoEditor.Show();
             return;
         }
@@ -58,8 +69,10 @@ public partial class TrackRow
         {
             if (drumEditor != null) { drumEditor.Activate(); return; }
             drumEditor = new DrumWindow(midi, TrackName.Text, grid, MidiEdited,
-                () => ToggleTransportRequested?.Invoke(), OpenDrumSettings) { Owner = Window.GetWindow(this) };
+                () => ToggleTransportRequested?.Invoke(), phase => SeekRequested?.Invoke(phase),
+                OpenDrumSettings) { Owner = Window.GetWindow(this) };
             drumEditor.Closed += (_, _) => drumEditor = null;
+            drumEditor.Activated += (_, _) => MidiTargetRequested?.Invoke();
             drumEditor.Show();
             return;
         }
@@ -67,6 +80,7 @@ public partial class TrackRow
         midiEditor = new PianoRollWindow(midi, TrackName.Text, grid, MidiEdited,
             () => ToggleTransportRequested?.Invoke()) { Owner = Window.GetWindow(this) };
         midiEditor.Closed += (_, _) => midiEditor = null;
+        midiEditor.Activated += (_, _) => MidiTargetRequested?.Invoke();
         midiEditor.Show();
     }
 

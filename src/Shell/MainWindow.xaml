@@ -2,7 +2,7 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:local="clr-namespace:EazyLoop"
- Title="{DynamicResource 'loc:EazyLoop 0.7.10 · гитарный лупер'}" Width="1110" Height="776" MinWidth="850" MinHeight="640"
+ Title="EazyLoop" Width="1110" Height="776" MinWidth="850" MinHeight="640"
  WindowStartupLocation="CenterScreen" FontFamily="Segoe UI" FontSize="14"
  Background="{DynamicResource Background}" Foreground="{DynamicResource Ink}"
  UseLayoutRounding="True" PreviewKeyDown="WindowKeys" Loaded="WindowLoaded" Closing="WindowClosing">
@@ -153,7 +153,7 @@
      </Border>
      <TextBlock Text="EazyLoop" FontSize="26" FontWeight="Bold" Margin="12,0,0,0"/>
      <Border Margin="10,0,0,0" Padding="6,2" Background="{DynamicResource AccentPanel}" CornerRadius="5" VerticalAlignment="Center">
-      <TextBlock Text="{DynamicResource 'loc:БЕТА 0.7.10'}" Foreground="{DynamicResource Violet}" FontWeight="SemiBold" FontSize="10"/>
+      <TextBlock x:Name="BetaBadge" Foreground="{DynamicResource Violet}" FontWeight="SemiBold" FontSize="10"/>
      </Border>
     </StackPanel>
     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -415,6 +415,13 @@
        AutomationProperties.Name="{DynamicResource 'loc:Компенсация записи в миллисекундах'}"/>
      </DockPanel>
      <TextBlock x:Name="CompensationHint" Foreground="{DynamicResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"/>
+     <TextBlock Text="{DynamicResource 'loc:MIDI-клавиатура'}" Style="{StaticResource Label}" Margin="0,15,0,5"/>
+     <DockPanel>
+      <Button DockPanel.Dock="Right" Width="35" Height="35" Margin="8,0,0,0" Padding="0" Content="↻" Click="RefreshMidiInputs"
+       ToolTip="{DynamicResource 'loc:Обновить список MIDI-устройств'}" AutomationProperties.Name="{DynamicResource 'loc:Обновить список MIDI-устройств'}"/>
+      <ComboBox x:Name="MidiInputList" Height="35" DisplayMemberPath="Name" AutomationProperties.Name="{DynamicResource 'loc:MIDI-клавиатура'}"/>
+     </DockPanel>
+     <TextBlock x:Name="MidiInputHint" Foreground="{DynamicResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"/>
      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,21,0,0">
       <Button Content="{DynamicResource 'loc:Отмена'}" Width="88" Click="CloseSettings"/>
       <Button Width="106" Margin="8,0,0,0" Background="{DynamicResource Violet}" BorderBrush="{DynamicResource Violet}" Click="ApplySettings">

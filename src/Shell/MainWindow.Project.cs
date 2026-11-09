@@ -224,6 +224,7 @@ public partial class MainWindow
         project = store;
         projectWarning = warning;
         ready = false;
+        SelectMidiTarget(null);
         foreach (var row in rows)
         {
             engine.Remove(row.Data);
@@ -279,6 +280,7 @@ public partial class MainWindow
         {
             ComponentDispatcher.ThreadFilterMessage -= TransportKeyMessage;
             timer.Stop();
+            SetMidiInput(null);
             // The driver may still own a blocked callback during process exit.
             if (sound?.StopForExit() != false)
                 foreach (var row in rows) row.DisposeEffects();

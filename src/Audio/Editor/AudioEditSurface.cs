@@ -18,6 +18,7 @@ public sealed class AudioEditSurface : ThemedCanvas
     private int timeline;
     private int viewStart;
     private int viewFrames = 1;
+    private double waveScale = 1;
     private int phase = -1;
     private DrawingGroup? image;
     private int selectedClip = -1;
@@ -50,6 +51,7 @@ public sealed class AudioEditSurface : ThemedCanvas
     internal event Action? SelectionChanged;
     internal event Action<int>? SeekRequested;
     internal event Action<int>? ZoomRequested;
+    internal event Action<int>? WaveZoomRequested;
 
     private double WidthOfTime => Math.Max(1, ActualWidth - Gutter);
     private double GainTop => Math.Max(RulerHeight + 70, ActualHeight - 134);
@@ -91,6 +93,13 @@ public sealed class AudioEditSurface : ThemedCanvas
         timeline = total;
         viewStart = start;
         viewFrames = frames;
+        RefreshDrawing();
+    }
+
+    internal void SetWaveScale(double scale)
+    {
+        if (waveScale == scale) return;
+        waveScale = scale;
         RefreshDrawing();
     }
 
@@ -230,14 +239,14 @@ public sealed class AudioEditSurface : ThemedCanvas
         d.Pop();
         var wave = new Pen(accent, 1);
         double middle = top + height * .53;
+        double scale = height * .42;
         for (double x = Math.Max(Gutter, left) + .5; x < Math.Min(ActualWidth, right); x += 2)
         {
             int a = clip.Source + Math.Clamp((int)FrameAt(x) - clip.Start, 0, clip.Frames - 1);
             int b = clip.Source + Math.Clamp((int)Math.Ceiling(FrameAt(x + 2)) - clip.Start, 1, clip.Frames);
             var (min, max) = Peak(a, b);
-            double scale = height * .42;
-            d.DrawLine(wave, new Point(x, middle - Math.Clamp(max, 0, 1) * scale - .4),
-                new Point(x, middle - Math.Clamp(min, -1, 0) * scale + .4));
+            d.DrawLine(wave, new Point(x, middle - Math.Clamp(max * waveScale, 0, 1) * scale - .4),
+                new Point(x, middle - Math.Clamp(min * waveScale, -1, 0) * scale + .4));
         }
     }
 
@@ -458,8 +467,14 @@ public sealed class AudioEditSurface : ThemedCanvas
     protected override void OnMouseWheel(MouseWheelEventArgs e)
     {
         base.OnMouseWheel(e);
-        if (beforeDrag != null || Keyboard.Modifiers != ModifierKeys.Control) return;
-        ZoomRequested?.Invoke(Math.Sign(e.Delta));
+        if (beforeDrag != null || e.Delta == 0) return;
+        int direction = Math.Sign(e.Delta);
+        switch (Keyboard.Modifiers)
+        {
+            case ModifierKeys.Control: ZoomRequested?.Invoke(direction); break;
+            case ModifierKeys.Alt: WaveZoomRequested?.Invoke(direction); break;
+            default: return;
+        }
         e.Handled = true;
     }
 

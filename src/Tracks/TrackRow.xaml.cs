@@ -29,6 +29,7 @@ public partial class TrackRow : UserControl
     internal event Action? InputListRequested;
     internal event Action? Edited;
     internal event Action? ContentEdited;
+    internal event Action<int>? SeekRequested;
 
     internal TrackRow(LoopEngine engine, Track track, int number, LoopGrid grid, TrackSettings? saved = null)
     {
@@ -189,19 +190,20 @@ public partial class TrackRow : UserControl
         if (Data.Midi is { } midi) UpdateMidiPreview(midi, -1);
     }
 
-    internal void Display(int phase, bool playing, bool busy, string? state)
+    internal void Display(TransportView transport, bool busy, string? state)
     {
+        int phase = transport.Playing && transport.State != Transport.CountIn ? transport.Phase : -1;
         if (Data.Midi is { } midi)
         {
             UpdateMidiPreview(midi, phase);
-            midiEditor?.Transport(phase, playing);
-            glissandoEditor?.Transport(phase, playing);
-            drumEditor?.Transport(phase, playing);
+            midiEditor?.Transport(phase, transport.Playing);
+            glissandoEditor?.Transport(phase, transport.Playing);
+            drumEditor?.Transport(transport.Phase, transport.Playing);
         }
         else
         {
             Wave.SetPlayhead(phase, busy && state == Locale.T("Запись…"));
-            audioEditor?.Transport(phase < 0 ? -1 : LoopEngine.Mod(phase - Data.Shift, grid.Frames), playing);
+            audioEditor?.Transport(phase < 0 ? -1 : LoopEngine.Mod(phase - Data.Shift, grid.Frames), transport.Playing);
         }
         if (active == busy && (state == null || TrackInfo.Text == state)) return;
         active = busy;
@@ -218,14 +220,14 @@ public partial class TrackRow : UserControl
         UpdateControls();
     }
 
-    private string Description() => IsDrums ? "Drums" : IsMidi ? "MIDI" : Data.Length == 0
+    private string Description() => midiInputTarget ? Locale.T("MIDI-вход") : IsDrums ? "Drums" : IsMidi ? "MIDI" : Data.Length == 0
         ? armed ? Locale.T("Выбрана") : Locale.T("Пустая")
         : Locale.F($"{Data.PlaybackLength / (double)LoopEngine.Rate:0.00} с");
 
     private void UpdateTrackAppearance()
     {
-        Card.SetResourceReference(Border.BackgroundProperty, active || armed ? "AccentPanel" : "Panel");
-        Card.SetResourceReference(Border.BorderBrushProperty, active ? "Rose" : armed ? "AccentLine" : "Line");
+        Card.SetResourceReference(Border.BackgroundProperty, active || armed || midiInputTarget ? "AccentPanel" : "Panel");
+        Card.SetResourceReference(Border.BorderBrushProperty, active ? "Rose" : armed || midiInputTarget ? "AccentLine" : "Line");
     }
 
     private void CollapseClicked(object sender, RoutedEventArgs e)

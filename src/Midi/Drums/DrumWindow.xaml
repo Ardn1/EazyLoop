@@ -35,6 +35,10 @@
      <Button x:Name="PlayButton" Style="{StaticResource Compact}" Width="83" Content="{DynamicResource 'loc:▶ Играть'}" Click="PlayClicked"/>
      <TextBlock Text="{DynamicResource 'loc:ШАГ'}" Style="{StaticResource Label}" Margin="13,0,6,0"/>
      <ComboBox x:Name="StepChoice" Width="78" Height="27" DisplayMemberPath="Name" SelectionChanged="StepChanged" AutomationProperties.Name="{DynamicResource 'loc:Шаг ударных'}"/>
+     <Button x:Name="CopyButton" Style="{StaticResource Compact}" Margin="12,0,4,0" Content="{DynamicResource 'loc:Копировать'}"
+      ToolTip="{DynamicResource 'loc:Ctrl+C. Потяните от пустого места, чтобы выделить ноты рамкой.'}" Click="CopyClicked"/>
+     <Button Style="{StaticResource Compact}" Content="{DynamicResource 'loc:Вставить'}"
+      ToolTip="{DynamicResource 'loc:Правый щелчок по линейке задаёт место вставки.'}" Click="PasteClicked"/>
     </StackPanel>
    </DockPanel>
   </Border>
@@ -44,7 +48,7 @@
   <Slider x:Name="Scroll" Grid.Row="3" Minimum="0" Maximum="0" Value="0" ValueChanged="ViewportChanged" Margin="144,2,0,0"
    Visibility="Collapsed" AutomationProperties.Name="{DynamicResource 'loc:Прокрутка по времени'}"/>
   <Grid Grid.Row="4" Margin="0,8,0,0">
-   <TextBlock Text="{DynamicResource 'loc:Щелчок по полосе — удар. Правый щелчок — выбрать удар или настроить барабан.'}"
+   <TextBlock Text="{DynamicResource 'loc:Клик по пустой клетке добавляет удар или снимает выделение. Потяните с пустого места, чтобы выделить удары рамкой.'}"
     Foreground="{DynamicResource Muted}" FontSize="11" TextWrapping="Wrap" MaxWidth="425" HorizontalAlignment="Left"/>
    <StackPanel x:Name="HitControls" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,0,0">
     <TextBlock x:Name="HitLabel" Text="{DynamicResource 'loc:Выберите удар'}" Foreground="{DynamicResource Soft}" Margin="0,0,10,0" FontSize="12"/>

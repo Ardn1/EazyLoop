@@ -14,7 +14,8 @@ public partial class DrumWindow : Window
     private LoopGrid grid;
     private bool ready, settingViewport, showingHit;
 
-    internal DrumWindow(MidiTrack track, string title, LoopGrid grid, Action edited, Action play, Action<int> settings)
+    internal DrumWindow(MidiTrack track, string title, LoopGrid grid, Action edited, Action play, Action<int> seek,
+        Action<int> settings)
     {
         this.track = track;
         this.edited = edited;
@@ -33,6 +34,7 @@ public partial class DrumWindow : Window
         Closed += (_, _) => track.SequenceHistory.Changed -= ShowHistory;
         Steps.SelectionChanged += ShowHit;
         Steps.SettingsRequested += settings;
+        Steps.SeekRequested += seek;
         ready = true;
         KitChanged();
         UpdateViewport();
@@ -45,15 +47,29 @@ public partial class DrumWindow : Window
         RedoButton.IsEnabled = track.SequenceHistory.CanRedo;
     }
 
-    private void WindowKeys(object sender, KeyEventArgs e) => HistoryKeys.Handle(e, StepHistory);
+    private void WindowKeys(object sender, KeyEventArgs e)
+    {
+        if (HistoryKeys.Handle(e, StepHistory) || e.IsRepeat || e.OriginalSource is ComboBox or ComboBoxItem) return;
+        var modifiers = Keyboard.Modifiers;
+        if (modifiers == ModifierKeys.Control && e.Key == Key.C) Steps.CopyNotes();
+        else if (modifiers == ModifierKeys.Control && e.Key == Key.V) PasteNotes();
+        else if (modifiers == ModifierKeys.None && e.Key == Key.Delete)
+        {
+            Steps.CancelGesture();
+            Steps.RemoveSelected();
+        }
+        else if (e.Key != Key.Escape || !Steps.CancelGesture()) return;
+        e.Handled = true;
+    }
+
     private void UndoClicked(object sender, RoutedEventArgs e) => StepHistory(false);
     private void RedoClicked(object sender, RoutedEventArgs e) => StepHistory(true);
 
     private void StepHistory(bool forward)
     {
+        Steps.CancelGesture();
         if (!track.SequenceHistory.Step(forward)) return;
-        Steps.Refresh();
-        ShowHit();
+        Steps.SyncSelection();
         edited();
     }
 
@@ -64,20 +80,19 @@ public partial class DrumWindow : Window
         if (grid == value) return;
         grid = value;
         UpdateViewport();
-        ShowHit();
+        Steps.SyncSelection();
     }
 
     internal void KitChanged()
     {
         KitLabel.Text = Locale.F($"SimpleDrums  ·  {track.Kit!.Count} из 8 полос");
-        Steps.Refresh();
-        ShowHit();
+        Steps.SyncSelection();
     }
 
     internal void Transport(int phase, bool playing)
     {
         PlayButton.Content = playing ? Locale.T("■ Стоп") : Locale.T("▶ Играть");
-        Steps.Playhead(phase < 0 ? -1 : (int)Math.Round(phase * MidiTrackSettings.Ppq / grid.BeatFrames));
+        Steps.Playhead(phase / grid.BeatFrames * MidiTrackSettings.Ppq);
     }
 
     private void UpdateViewport()
@@ -97,6 +112,7 @@ public partial class DrumWindow : Window
     private void ShowHit()
     {
         showingHit = true;
+        CopyButton.IsEnabled = Steps.HasSelection;
         var hit = Steps.Selected;
         int index = hit == null ? -1 : Array.IndexOf(DrumKit.Keys, hit.Pitch);
         bool visible = index >= 0 && index < track.Kit!.Count;
@@ -111,6 +127,15 @@ public partial class DrumWindow : Window
     private void ViewportChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => UpdateViewport();
     private void PlayClicked(object sender, RoutedEventArgs e) => togglePlay();
     private void KitClicked(object sender, RoutedEventArgs e) => openSettings(-1);
+    private void CopyClicked(object sender, RoutedEventArgs e) => Steps.CopyNotes();
+    private void PasteClicked(object sender, RoutedEventArgs e) => PasteNotes();
+
+    private void PasteNotes()
+    {
+        Steps.CancelGesture();
+        if (Steps.PasteNotes() is { } message)
+            MessageBox.Show(this, message, Locale.T("Вставка нот"), MessageBoxButton.OK, MessageBoxImage.Information);
+    }
 
     private void VelocityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {

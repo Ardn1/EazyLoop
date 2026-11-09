@@ -333,40 +333,38 @@ internal sealed class LoopEngine
         int frames = stereo.Length / 2;
         long start, loopStart, audioStart, clickStart, epoch;
         LoopGrid current;
-        bool clickEnabled, running;
+        bool clickEnabled, playTracks;
         float clickGain;
         int partCount = 0;
         lock (gate)
         {
             start = rendered;
             rendered += frames;
-            running = playing;
             current = grid;
             loopStart = origin;
             audioStart = playbackStart;
             clickStart = countInStart;
             epoch = renderEpoch;
             clickEnabled = metronome;
-            clickGain = running ? clickVolume : 0;
-            int first = running ? (int)Math.Clamp(audioStart - start, 0, frames) : 0;
+            clickGain = playing ? clickVolume : 0;
+            int first = playing ? (int)Math.Clamp(audioStart - start, 0, frames) : 0;
+            playTracks = playing && first < frames;
+            if (!playTracks) first = 0;
             int phase = Mod(start + first - loopStart, current.Frames);
 
-            if (first < frames)
+            bool soloActive = tracks.Any(static track => track.Solo);
+            foreach (var track in tracks)
             {
-                bool soloActive = tracks.Any(static track => track.Solo);
-                foreach (var track in tracks)
+                bool audible = !track.Muted && track.Volume != 0 && (!soloActive || track.Solo);
+                if (track.Midi is { } midi)
                 {
-                    if (track.Muted || track.Volume == 0 || (soloActive && !track.Solo)) continue;
-                    if (track.Midi is { } midi)
-                    {
-                        if (midi.CanPlay && (running || midi.HasPreview))
-                            mixParts[partCount++] = new([], 0, track.Volume, track.Pan, 0, first, phase, track.Fx, midi);
-                        continue;
-                    }
-                    if (running && track.Length > 0)
-                        mixParts[partCount++] = new(track.PlaybackSamples, Math.Min(track.PlaybackLength, current.Frames),
-                            track.Volume, track.Pan, track.Shift, first, phase, track.Fx, null);
+                    if (midi.CanPlay && (audible ? playTracks || midi.HasPreview : midi.HasLiveNotes))
+                        mixParts[partCount++] = new([], 0, audible ? track.Volume : 0, track.Pan, 0, first, phase, track.Fx, midi);
+                    continue;
                 }
+                if (audible && playTracks && track.Length > 0)
+                    mixParts[partCount++] = new(track.PlaybackSamples, Math.Min(track.PlaybackLength, current.Frames),
+                        track.Volume, track.Pan, track.Shift, first, phase, track.Fx, null);
             }
         }
 
@@ -375,7 +373,7 @@ internal sealed class LoopEngine
         {
             var part = mixParts[i];
             mixParts[i] = default;
-            MixTrack(stereo, part, current, epoch, running);
+            MixTrack(stereo, part, current, epoch, playTracks);
         }
 
         if (clickGain > 0 && (clickEnabled || (start < audioStart && clickStart < audioStart)))

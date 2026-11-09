@@ -8,11 +8,12 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>EazyLoop</AssemblyName>
     <Product>EazyLoop</Product>
-    <Version>0.7.10-beta</Version>
-    <ApplicationIcon>EazyLoop.ico</ApplicationIcon>
+    <Version>0.7.12-beta</Version>
+    <ApplicationIcon>assets/EazyLoop.ico</ApplicationIcon>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
+    <ApplicationDefinition Include="src/App.xaml" />
     <PackageReference Include="NAudio.Wasapi" Version="3.3.0" />
     <PackageReference Include="NAudio.WinMM" Version="3.3.0" />
     <PackageReference Include="NAudio.Vst3" Version="3.3.0" />

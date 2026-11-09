@@ -36,7 +36,7 @@ public partial class MainWindow : Window
         ThemeManager.Initialize();
         InitializeComponent();
         Ruler.SeekRequested += SeekPlayback;
-        UpdateLanguageIcon();
+        UpdateLanguageHeader();
         Meter.ItemsSource = new[] { 2, 3, 4, 5, 6, 7 }.Select(n => new Choice(n, $"{n}/4")).ToArray();
         Meter.DisplayMemberPath = nameof(Choice.Name);
         Meter.SelectedValuePath = nameof(Choice.Value);
@@ -182,8 +182,12 @@ public partial class MainWindow : Window
         row.RemoveRequested += RemoveTrack;
         row.ExportRequested += ExportTrack;
         row.SaveAudioProjectRequested += () => SaveProjectClicked(this, new RoutedEventArgs());
-        row.AudioSeekRequested += phase => { if (!fileBusy && !settingsActive) SeekPlayback(phase); };
+        row.SeekRequested += phase => { if (!fileBusy && !settingsActive) SeekPlayback(phase); };
         row.ToggleTransportRequested += TogglePlay;
+        row.MidiTargetRequested += () =>
+        {
+            if (ready && rows.Contains(row)) SelectMidiTarget(row);
+        };
         row.TargetRequested += SelectRecordingTrack;
         row.InputListRequested += RefreshMicrophones;
         row.DragRequested += BeginTrackDrag;
@@ -194,6 +198,7 @@ public partial class MainWindow : Window
         row.UpdateFxButton();
         rows.Add(row);
         TrackList.Children.Add(row);
+        if (midiTarget == null && row.IsMidi) SelectMidiTarget(row);
         UpdateTrackCount();
         if (scroll)
         {
@@ -220,6 +225,7 @@ public partial class MainWindow : Window
     private void DetachTrack(TrackRow row)
     {
         if (row == armedRow) armedRow = null;
+        if (row == midiTarget) SelectMidiTarget(rows.FirstOrDefault(candidate => candidate != row && candidate.IsMidi));
         engine.Remove(row.Data);
         row.DisposeEffects();
         rows.Remove(row);
@@ -310,7 +316,6 @@ public partial class MainWindow : Window
             recordingRow = null;
             UpdateRecordingTarget();
         }
-        bool hasPhase = snapshot.Playing && transport != Transport.CountIn;
 
         string status = transport switch
         {
@@ -334,12 +339,11 @@ public partial class MainWindow : Window
         Level.Width = Math.Clamp(75 * Math.Sqrt(snapshot.Peak), 0, 75);
         Level.Background = (Brush)FindResource(snapshot.Peak >= 0.98f ? "Rose" : "Mint");
         UpdateTuner(sound.InputFrequency, !missingTrackInput && inputError == null);
-        int phase = hasPhase ? snapshot.Phase : -1;
         UpdateRuler(snapshot);
         foreach (var row in rows)
         {
             bool active = row == recordingRow;
-            row.Display(phase, snapshot.Playing, active, active ? transport switch
+            row.Display(snapshot, active, active ? transport switch
             {
                 Transport.Recording => Locale.T("Запись…"),
                 Transport.Finishing => Locale.T("Завершение…"),
@@ -382,6 +386,7 @@ public partial class MainWindow : Window
         settingsActive = true;
         DriverList.SelectedIndex = (int)options.Driver;
         FillSettings(options.Driver);
+        PopulateMidiInputs(midiDevice);
         CompensationAuto.IsChecked = options.RecordingCompensationMs == null;
         if (options.RecordingCompensationMs is double manual)
             CompensationValue.Text = manual.ToString("0.###", Locale.Culture);
@@ -458,6 +463,7 @@ public partial class MainWindow : Window
             driver == options.Driver ? options.Input : SoundSession.Default,
             (string)(OutputList.SelectedValue ?? SoundSession.Default), compensation);
         bool reopen = next.Driver != options.Driver || next.Buffer != options.Buffer || next.Output != options.Output;
+        if (!ApplyMidiInput()) return;
         options = next;
         HideSettings();
         if (reopen)
@@ -472,7 +478,8 @@ public partial class MainWindow : Window
         if (fileBusy) return;
         if (settingsActive)
         {
-            if (e.Key == Key.Escape && !DriverList.IsDropDownOpen && !OutputList.IsDropDownOpen && !BufferList.IsDropDownOpen)
+            if (e.Key == Key.Escape && !DriverList.IsDropDownOpen && !OutputList.IsDropDownOpen && !BufferList.IsDropDownOpen &&
+                !MidiInputList.IsDropDownOpen)
             {
                 HideSettings();
                 e.Handled = true;
